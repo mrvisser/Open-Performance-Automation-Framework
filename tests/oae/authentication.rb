@@ -29,15 +29,9 @@ sesh = Session.new(config, 'customize_dashbaord', probability)
 username = '%%_username%%'
 password = '%%_user_password%%'
 
-login_txn = sesh.add_transaction("login")
-login_req = login_txn.add_requests
-config.log.info_msg("#{test}: Loggin in as: #{username}")
-auth = Authentication.new(login_req)
-auth.login(username, password)
+config.log.info_msg("#{test}: Logging in as: #{username}")
+Authentication.new(sesh).login(username, password)
 
 # Logout
-logout_txn = sesh.add_transaction("logout")
-logout_req = logout_txn.add_requests
 config.log.info_msg("#{test}: Logging out")
-auth = Authentication.new(logout_req)
-auth.logout
+Authentication.new(sesh).logout

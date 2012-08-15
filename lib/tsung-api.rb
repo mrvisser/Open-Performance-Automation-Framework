@@ -22,6 +22,8 @@ require 'rubygems'
 # Force https write if config.ssl == true and last request wasn't FQ'd
 @@last_req_fq = false
 
+@@txn_inc = 0
+
 # Main Sessions class, most often called from creating Session object
 # This will write the 'sessions' xml elements
 class TsungSessions
@@ -95,6 +97,10 @@ class Session < TsungSessions
     return txn
   end
   
+  def add_thinktime(duration)
+    self.add_transaction('thinktime').add_requests.add_thinktime(duration)
+  end
+  
   def to_s
     "Session-> Name: #{@name} Probability: #{@probability} Type: #{@type} session_element: #{@session_element}"
   end
@@ -103,20 +109,28 @@ end
 # Individual transaction with many requests. Writes '<transaction>' xml element
 class Transaction < Session
   
-  attr_accessor :txn_name
+  attr_accessor :txn_name, :txn_id
   attr_reader :transaction_element, :request
   
-  def initialize(txn_name, config, session_name, probability='100%', type='ts_http')
+  def initialize(txn_name, config, session_name, probability='100%', type='ts_http', txn_id=-1)
     config.log.debug_msg("Transaction-> entering initialize...")
     super(config, session_name, probability, type)
-    @txn_name    = txn_name # Need to verify it's valid format - lowercase alpha + underscores
-    @@transaction_element[@txn_name] = {} if(!@@transaction_element[@txn_name])
+    @txn_name = txn_name # Need to verify it's valid format - lowercase alpha + underscores
+    
+    if (txn_id == -1)
+      @txn_id = @@txn_inc
+      @@txn_inc = @@txn_inc+1
+    else
+      @txn_id = txn_id
+    end
+    
+    @@transaction_element[@txn_id] = {} if(!@@transaction_element[@txn_id])
     
     # Check if transaction element has been written yet
-    if(!@@transaction_element[@txn_name][:written])
+    if(!@@transaction_element[@txn_id][:written])
       config.log.debug_msg("Transaction-> entering write_xml_elements...")
-      @@transaction_element[@txn_name][:element] = @@session_element[session_name][:element].add_element('transaction', {"name" => @txn_name})
-      @@transaction_element[@txn_name][:written] = true
+      @@transaction_element[@txn_id][:element] = @@session_element[session_name][:element].add_element('transaction', {"name" => @txn_name})
+      @@transaction_element[@txn_id][:written] = true
     end
     
     config.log.debug_msg("Created Transaction: #{@txn_name}")
@@ -124,7 +138,7 @@ class Transaction < Session
   
   # Creates Requests object that contains all requests
   def add_requests
-    @request = Requests.new(@txn_name, self.config, self.name, self.probability, self.type)
+    @request = Requests.new(@txn_id, @txn_name, self.config, self.name, self.probability, self.type)
   end
 
   # Returns all requests contained in this transaction
@@ -141,11 +155,11 @@ class Requests < Transaction
   attr_accessor :list, :http_mode
   attr_reader :xml_element
   
-  def initialize(txn_name, config, session_name, probability='100%', type='ts_http')
+  def initialize(txn_id, txn_name, config, session_name, probability='100%', type='ts_http')
     config.log.debug_msg("Requests-> entering initialize...")
-    super(txn_name, config, session_name, probability, type)
+    super(txn_name, config, session_name, probability, type, txn_id)
     @list = [] # request list
-    @xml_element = @@transaction_element[txn_name][:element]
+    @xml_element = @@transaction_element[txn_id][:element]
     
     # Create request URL for rpc hack
     # Only works with 1 server BUG
@@ -345,6 +359,22 @@ class LogWriter < Writer
       puts("Debug: #{msg}")
       @file.puts("Debug: #{msg}")
     end
+  end
+  
+end
+
+# Utility classes
+class SessionUtil
+
+  attr_accessor :session
+
+  def initialize(session)
+    @session = session
+  end
+  
+  def create_txn_reqs(name)
+    txn = @session.add_transaction(name)
+    return txn.add_requests
   end
   
 end

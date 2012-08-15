@@ -41,49 +41,30 @@ inviter_username = '%%_accept_inviter_username%%'
 sesh = Session.new(config, 'accept_contact', probability)
 
 # Navigate to the home page
-explore_txn = sesh.add_transaction("explore")
-explore_req = explore_txn.add_requests
 config.log.info_msg("#{test}: Loading the home page")
-explore = Explore.new(explore_req)
-explore.splash
+Explore.new(sesh).splash
+Explore.new(sesh).splash
+Explore.new(sesh).splash
+sesh.add_thinktime(5)
 
-explore_req.add_thinktime(5)
+config.log.info_msg("#{test}: Logging in, redirect to dashboard")
+Authentication.new(sesh).login(invitee_username, invitee_password)
+Dashboard.new(sesh).load(invitee_username)
 
-login_txn = sesh.add_transaction("login")
-login_req = login_txn.add_requests
-config.log.info_msg("#{test}: Logging in as: #{invitee_username}")
-auth = Authentication.new(login_req)
-auth.login(invitee_username, invitee_password, {
-		:load_homepage => false,
-		:thinktime => false
-	})
-
-# Directly to dashboard with no thinktime
-dashboard_txn = sesh.add_transaction("my_dashboard")
-dashboard_req = dashboard_txn.add_requests
-config.log.info_msg("#{test}: View my dashboard")
-dashboard = Dashboard.new(dashboard_req)
-dashboard.load(invitee_username)
-dashboard_req.add_thinktime(3)
+sesh.add_thinktime(3)
 
 # View my messages
-my_messages_txn = sesh.add_transaction("my_messages_inbox")
-my_messages_req = my_messages_txn.add_requests
 config.log.info_msg("#{test}: Viewing My Messages as: #{invitee_username}")
-my_messages = Messages.new(my_messages_req)
-my_messages.my_inbox(invitee_username)
+Messages.new(sesh).my_inbox(invitee_username)
+
+sesh.add_thinktime(5)
 
 # Accept the invitation
-accept_txn = sesh.add_transaction("accept_contact_request")
-accept_req = accept_txn.add_requests
 config.log.info_msg("#{test}: Accept contact request from #{inviter_username} to #{invitee_username}")
-contacts = Contacts.new(accept_req)
-contacts.accept(inviter_username, invitee_username)
+Contacts.new(sesh).accept(inviter_username, invitee_username)
+
+sesh.add_thinktime(3)
 
 # Logout
-logout_txn = sesh.add_transaction("logout")
-logout_req = logout_txn.add_requests
 config.log.info_msg("#{test}: Logging out")
-auth = Authentication.new(logout_req)
-auth.logout
-
+Authentication.new(sesh).logout

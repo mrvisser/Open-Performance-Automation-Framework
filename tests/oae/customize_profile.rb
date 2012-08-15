@@ -37,50 +37,26 @@ new_last_name = '%%_rnd_last_name%%'
 tag_name = '%%_rnd_tag%%'
 
 # Navigate to the home page
-explore_txn = sesh.add_transaction("explore")
-explore_req = explore_txn.add_requests
 config.log.info_msg("#{test}: Loading the home page")
-explore = Explore.new(explore_req)
-explore.splash
+Explore.new(sesh).splash
 
-explore_req.add_thinktime(5)
+sesh.add_thinktime(5)
 
-login_txn = sesh.add_transaction("login")
-login_req = login_txn.add_requests
 config.log.info_msg("#{test}: Logging in as: #{username}")
-auth = Authentication.new(login_req)
-user_data = auth.login(username, password, {
-		:load_homepage => false,
-		:thinktime => false
-	})
+user_data = Authentication.new(sesh).login(username, password)
 
 # Directly to dashboard with no thinktime
-dashboard_txn = sesh.add_transaction("my_dashboard")
-dashboard_req = dashboard_txn.add_requests
 config.log.info_msg("#{test}: View my dashboard")
-dashboard = Dashboard.new(dashboard_req)
-dashboard.load(username)
-dashboard_req.add_thinktime(3)
+Dashboard.new(sesh).load(username)
+
+sesh.add_thinktime(3)
 
 # Customize Profile
-profile_txn = sesh.add_transaction("customize_profile")
-profile_req = profile_txn.add_requests
 config.log.info_msg("#{test}: Customizing profile")
-profile = Profile.new(profile_req)
-profile.edit(username, new_first_name, new_last_name, user_data[:email],
-  {
-    :load_homepage => false,
-    :sections => {
-      :basic_information => {
-          :tags => [tag_name]
-      }
-    }
-  }
-)
+Profile.new(sesh).update_basic_information(username, new_first_name, new_last_name, user_data[:email], [tag_name])
+
+sesh.add_thinktime(5)
 
 # Logout
-logout_txn = sesh.add_transaction("logout")
-logout_req = logout_txn.add_requests
 config.log.info_msg("#{test}: Logging out")
-auth = Authentication.new(logout_req)
-auth.logout
+Authentication.new(sesh).logout

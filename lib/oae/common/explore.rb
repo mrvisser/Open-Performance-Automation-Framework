@@ -1,5 +1,10 @@
 #!/usr/bin/env ruby
 
+require 'drb'
+config = DRbObject.new nil, "druby://localhost:#{ENV['DRB_PORT']}"
+
+require config.lib_base_dir + "/tsung-api.rb"
+
 # 
 # == Synopsis
 #
@@ -10,23 +15,24 @@
 
 class Explore
   
-  attr_accessor :request
+  attr_accessor :session
   
-  def initialize(request_obj)
-    @request = request_obj
+  def initialize(session_obj)
+    @session = session_obj
   end
   
   #
   # Loads the splash page of OAE
   #
   def splash()
-		@request.add('/')
-		@request.add('/var/widgets.json?callback=define')
-		@request.add('/system/me?_charset_=utf-8')
-		@request.add('/tags/directory.tagged.json?_charset_=utf-8&_=1342651726188')
-		@request.add('/var/search/activity/all.json?items=12&_charset_=utf-8&_=1342651726197')
-		@request.add('/var/search/public/random-content.json?page=0&items=10&tag=&type=c&_charset_=utf-8&_=1342651726201')
-		@request.add('/var/templates/worlds.2.json?_charset_=utf-8')
+    request = SessionUtil.new(@session).create_txn_reqs('splash')
+		request.add('/')
+		request.add('/var/widgets.json?callback=define')
+		request.add('/system/me?_charset_=utf-8')
+		request.add('/tags/directory.tagged.json?_charset_=utf-8&_=1342651726188')
+		request.add('/var/search/activity/all.json?items=12&_charset_=utf-8&_=1342651726197')
+		request.add('/var/search/public/random-content.json?page=0&items=10&tag=&type=c&_charset_=utf-8&_=1342651726201')
+		request.add('/var/templates/worlds.2.json?_charset_=utf-8')
   end
   
 end

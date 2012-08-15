@@ -1,5 +1,10 @@
 #!/usr/bin/env ruby
 
+require 'drb'
+config = DRbObject.new nil, "druby://localhost:#{ENV['DRB_PORT']}"
+
+require config.lib_base_dir + "/tsung-api.rb"
+
 # 
 # == Synopsis
 #
@@ -12,19 +17,21 @@
 
 class Content
   
-  attr_accessor :request
+  attr_accessor :session
   
-  def initialize(request_obj)
-    @request = request_obj
+  def initialize(session_obj)
+    @session = session_obj
   end
   
   # add content
   def add(user, opts = {})
+
+    request = SessionUtil.new(@session).create_txn_reqs('add_content')
     
     defaults = {
       :type => 'text',
       :directory => 'common',
-      :data_dir => @request.config.data_dir,
+      :data_dir => request.config.data_dir,
       :filename => 'default.txt',
       :unique_filename => false,
       :description => "uploaded from load test",
@@ -40,11 +47,8 @@ class Content
     opts[:file_fullpath] = "#{opts[:data_dir]}/#{opts[:directory]}/#{opts[:type]}/#{opts[:filename]}"
     
     boundary, content = read_file(opts[:file_fullpath])
-    
-    # Think time for browsing for file, description, etc...
-    @request.add_thinktime(10)
-    
-    @request.add('/system/pool/createfile',
+
+    request.add('/system/pool/createfile',
       {
         'method' => 'POST',
         'content_type' => "multipart/form-data; boundary=#{boundary}",
@@ -60,7 +64,7 @@ class Content
           'Accept-Language' => 'en-us,en;q=0.5',
           'Accept-Encoding' => 'gzip, deflate',
           'Accept-Charset' => 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
-          'Referer' => "#{@request.url}/me",
+          'Referer' => "#{request.url}/me",
           'Connection' => 'keep-alive'
         }
       }
@@ -68,7 +72,7 @@ class Content
     
     #@request.add("/DEBUG/path_var_name/%%_#{opts[:path_var_name]}%%", {}, {'subst' => 'true'})
     
-    @request.add('/system/batch',
+    request.add('/system/batch',
       {
         'method' => 'POST',
         'content_type' => 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -76,7 +80,7 @@ class Content
       }, {'subst' => 'true'}
     )
     
-    @request.add('/system/batch',
+    request.add('/system/batch',
       {
         'method' => 'POST',
         'content_type' => 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -84,7 +88,7 @@ class Content
       }, {'subst' => 'true'}
     )
     
-    @request.add("/p/%%_#{opts[:path_var_name]}%%",
+    request.add("/p/%%_#{opts[:path_var_name]}%%",
       {
         'method' => 'POST',
         'content_type' => 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -92,19 +96,19 @@ class Content
       }, {'subst' => 'true'}
     )
     
-    @request.add("/var/search/pool/all.infinity.json?items=2&q=#{opts[:filename]}+OR+#{user}+&_charset_=utf-8", {},
+    request.add("/var/search/pool/all.infinity.json?items=2&q=#{opts[:filename]}+OR+#{user}+&_charset_=utf-8", {},
       {'subst' => 'true'}
     )
     
-    @request.add("/var/search/pool/manager-viewer.json?userid=#{user}&page=0&items=8&sortOn=_lastModified&sortOrder=desc&q=*&_charset_=utf-8&_=1324063075702",
+    request.add("/var/search/pool/manager-viewer.json?userid=#{user}&page=0&items=8&sortOn=_lastModified&sortOrder=desc&q=*&_charset_=utf-8&_=1324063075702",
       {}, {'subst' => 'true'}
     )
     
-    @request.add("/~#{user}/public/authprofile.profile.json?_charset_=utf-8&_=1324063076061", {},
+    request.add("/~#{user}/public/authprofile.profile.json?_charset_=utf-8&_=1324063076061", {},
       {'subst' => 'true'}
     )
     
-    @request.add("/~#{user}/public/authprofile.profile.json?_charset_=utf-8", {},
+    request.add("/~#{user}/public/authprofile.profile.json?_charset_=utf-8", {},
       {'subst' => 'true'}
     )
     
@@ -112,7 +116,8 @@ class Content
   
   # Load My Library
   def my_library(username)
-    @request.add("/var/search/pool/auth-all.json?userid=#{username}&sortOn=_lastModified&sortOrder=desc&q=&page=0&items=18&_charset_=utf-8&_=1342652534274",
+    request = SessionUtil.new(@session).create_txn_reqs('my_library')
+    request.add("/var/search/pool/auth-all.json?userid=#{username}&sortOn=_lastModified&sortOrder=desc&q=&page=0&items=18&_charset_=utf-8&_=1342652534274",
     		{}, { 'subst' => 'true' })
   end
   

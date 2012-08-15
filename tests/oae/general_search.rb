@@ -25,25 +25,16 @@ sesh = Session.new(config, 'general_search', probability)
 search_term = 'ere'
 
 # Navigate to the home page
-explore_txn = sesh.add_transaction("explore")
-explore_req = explore_txn.add_requests
 config.log.info_msg("#{test}: Loading the home page")
-explore = Explore.new(explore_req)
-explore.splash
+Explore.new(sesh).splash
+
+sesh.add_thinktime(5)
 
 # Type search into top bar and hit enter
-search_txn = sesh.add_transaction("search")
-search_req = search_txn.add_requests
 config.log.info_msg("#{test}: Searching for #{search_term}")
-search = Search.new(search_req)
-search.search(search_term)
+Search.new(sesh).load
+Search.new(sesh).search(search_term)
 
 # Switch context to the "Content" search
-content_search_txn = sesh.add_transaction("content_search")
-content_search_req = content_search_txn.add_requests
 config.log.info_msg("#{test}: Switching context to Content search")
-content_search = Search.new(content_search_req)
-content_search.search(search_term, {
-		:load_search_page => false,
-		:search_category => 'content'
-	})
+Search.new(sesh).search(search_term, 'content')

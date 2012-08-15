@@ -14,7 +14,9 @@ config = DRbObject.new nil, "druby://localhost:#{ENV['DRB_PORT']}"
 
 require config.lib_base_dir + "/tsung-api.rb"
 require config.lib_base_dir + "/#{config.product}/common/authentication.rb"
-
+require config.lib_base_dir + "/#{config.product}/common/dashboard.rb"
+require config.lib_base_dir + "/#{config.product}/common/explore.rb"
+require config.lib_base_dir + "/#{config.product}/common/register.rb"
 
 # Test info - default test case setup
 test = File.basename(__FILE__)
@@ -28,16 +30,16 @@ sesh = Session.new(config, 'register', probability)
 # Register
 username = 'load_user_%%ts_user_server:get_unique_id%%' #unique id
 
-reg_txn = sesh.add_transaction("register")
-reg_req = reg_txn.add_requests
-config.log.info_msg("#{test}: Registering as: #{username}")
-auth = Authentication.new(reg_req)
-auth.register(username)
+config.log.info_msg("#{test}: Viewing the splash page")
+Explore.new(sesh).splash
 
+config.log.info_msg("#{test}: Registering as: #{username}")
+Registration.new(sesh).load
+Registration.new(sesh).type_username(username)
+Registration.new(sesh).register(username)
+sesh.add_thinktime(1)
+Dashboard.new(sesh).load(username)
 
 # Logout
-logout_txn = sesh.add_transaction("logout")
-logout_req = logout_txn.add_requests
 config.log.info_msg("#{test}: Logging out")
-auth = Authentication.new(logout_req)
-auth.logout
+Authentication.new(sesh).logout
